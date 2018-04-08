@@ -1,55 +1,85 @@
+package forestFireSim;
+
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
 import processing.core.*;
 
 public class GUI extends PApplet {
-	int c, count = 0;
-	double treeDensity = 0.01;
-	Simulator sim;
+	int height, width, numRows, numCols;
+	boolean initializer;
+	long startTime, endTime;
+	Forest forest;
 	Display display;
 
 	public void setup() {
-		size(640, 550); // set the size of the screen.
-
-		// Create a simulator
-		sim = new Simulator(100, 100, 0.01);		
+		height = 800;
+		width = 800*2;
+		numRows = 100;
+		numCols = 100;
+		int gapSize = 10;
 		
-		// Create the display
-		// parameters: (10,10) is upper left of display
-		// (620, 530) is the width and height
-		display = new Display(this, 10, 10, 620, 530);
+		size(width + 3*gapSize, height + 2*gapSize);
+		display = new Display(this, gapSize, gapSize, width, height);
 
-		display.setNumCols(100);		// NOTE:  these must match your simulator!!
-		display.setNumRows(100);
-	
-		// Set different grid values to different colors
-		// TODO:  uncomment these lines!
+		display.setup(numRows, numCols);
 		
-		display.setColor(Tree.ON_FIRE, color(255, 0, 0)); 
-		display.setColor(Tree.ASH, color(125, 125, 125));
-		display.setColor(Tree.LIVING, color(0, 200, 0));
-
-		// You can use classes instead, for example:
-		// display.setColor(Tree.class, color(0, 255, 0));
-		// display.setColor(Ash.class, color(0, 255, 0));
+		display.setColorTree(Tree.ON_FIRE, color(225, 0, 0)); 
+		display.setColorTree(Tree.ASH, color(12, 14, 1));
+		display.setColorTree(Tree.LIVING, color(47, 225, 0));
 		
+		for(int i = 0; i < 256; i++) {
+			display.setColorTemp(i, color(i, 0, 0));
+		}
+		
+		// Forest(int r, int c, int heatSpreadDist, double heatLostPerUpdate, double heatDissipation)
+		// forest = new Forest(numRows, numCols);
+		initializer = true;
+		forest = new Forest(numRows, numCols, 2, 1200, 30);
+		forest.initialize(0);
+		startTime = System.nanoTime();
 	}
 
 	@Override
 	public void draw() {
 		background(200);
-		
-		sim.doOneStep();
-		display.drawForest(sim.getForest());
 
-		if(sim.getForest().getNumTreesStatus(1) == 0) {
-			count++;
+		display.draw(forest);
+		forest.update();
+		
+		keyReleased();
+		
+		if(forest.getNumTreesStatus(Tree.ON_FIRE) == 0) {
+			if(initializer != true && forest.getNumTrees() > 0) {
+				endTime = System.nanoTime();
+				long duration = (endTime - startTime) / 1000000000;
 			
-			if(count > 100) {
-				sim.reset(treeDensity);
-				treeDensity += 0.01;
-				count = 0;
-			}
+				System.out.println("Time: " + duration + " seconds");
+				System.out.println("Percent Burned: " + (int)(forest.getPercentBurned()*100) + "%");
+				System.out.println("=====");
+			} else if (forest.getNumTrees() == 0) {
+
+			} else initializer = false;
 			
-			System.out.println("Count: " + count + ", Tree Density:" + treeDensity);
+			double density = (Math.random()*10 + 10) / 100.0;
+//			double density = (Math.random()*Math.random());
+			System.out.println("Density: " + density);
+			forest.reset(density);
+			
+			startTime = System.nanoTime();
 		}
+		
+	}
+	
+	public void keyReleased(KeyEvent e) {
+		switch(e.getKeyCode()) {
+			case KeyEvent.VK_R:
+				System.out.println("RESET\n=====");
+				double density = (Math.random()*10 + 10) / 100.0;
+				forest.reset(density);
+				System.out.println("Density: " + density);
+				startTime = System.nanoTime();
+				break;
+		}		
 	}
 }

@@ -1,3 +1,4 @@
+package forestFireSim;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -22,7 +23,8 @@ public class Display {
 	private int rows, cols;
 
 	// A map for storing colors for participants in the simulation
-	private Map<Object, Integer> colors;
+	private Map<Object, Integer> colorsTree;
+	private Map<Object, Integer> colorsTemp;
 	private Map<Object, PImage> images;
 
 	// (x, y) is the upper-left corner of the display in pixels
@@ -34,25 +36,31 @@ public class Display {
 		this.h = h;
 		this.p = p;
 
-		colors = new LinkedHashMap<Object, Integer>();
+		colorsTree = new LinkedHashMap<Object, Integer>();
+		colorsTemp = new LinkedHashMap<Object, Integer>();
 		images = new LinkedHashMap<Object, PImage>();
 	}
 
-	public void drawField(Forest f) {
-		Object thing;
-		Integer displayColor;
-		for (int i = 0; i < f.getWidth(); i++) {
-			for (int j = 0; j < f.getHeight(); j++) {
-				thing = f.getObjectAt(i, j);
-				if (thing != null) {
-					displayColor = getColor(thing.getClass());
-					p.fill(displayColor);
-				} else {
-					p.fill(this.EMPTY_COLOR);
-				}
-				p.rect(x + i * dx, y + j * dy, dx, dy);
-			}
-		}
+//	public void drawField(Forest f) {
+//		Object thing;
+//		Integer displayColor;
+//		for (int i = 0; i < f.getWidth(); i++) {
+//			for (int j = 0; j < f.getHeight(); j++) {
+//				thing = f.getObjectAt(i, j);
+//				if (thing != null) {
+//					displayColor = getColor(thing.getClass());
+//					p.fill(displayColor);
+//				} else {
+//					p.fill(this.EMPTY_COLOR);
+//				}
+//				p.rect(x + i * dx, y + j * dy, dx, dy);
+//			}
+//		}
+//	}
+	
+	public void draw(Forest forest) {
+		drawForest(forest);
+		drawTemperature(forest);
 	}
 
 	public void drawForest(Forest forest) {
@@ -70,7 +78,7 @@ public class Display {
 					pieceColor = this.EMPTY_COLOR;
 				} else {
 					int treestate = tree.getStatus();
-					pieceColor = getColor(treestate);
+					pieceColor = getColorTree(treestate);
 				}
 				
 				p.fill(pieceColor);
@@ -78,6 +86,33 @@ public class Display {
 
 			}
 		}
+	}
+	
+	public void drawTemperature(Forest forest) {
+		double[][] t = forest.getTemperature();
+		double defaultTemp = Forest.TEMP_DEFAULT;
+		double maxTemp = Forest.TEMP_MAX;
+		double factor = 255.0 / (maxTemp - defaultTemp);
+
+		int numRows = t.length;
+		int numCols = t[0].length;
+		
+		for(int r = 0; r < numRows; r++) {
+			for(int c = 0; c < numCols; c++) {
+				double temp = t[r][c];
+				int pieceColor;
+				
+				if(temp <= defaultTemp)
+					pieceColor = 0;
+				else {
+					int tempProportion = (int)(factor * (temp - defaultTemp));
+					pieceColor = getColorTemp(tempProportion);
+				}
+				
+				p.fill(pieceColor);
+				p.rect((x + w/2 + 10) + c * dx, y + r * dy, dx, dy);
+			}
+		}		
 	}
 
 	/**
@@ -88,10 +123,13 @@ public class Display {
 	 * @param color
 	 *          The color to be used for the given type of piece.
 	 */
-	public void setColor(int pieceType, Integer color) {
-		colors.put(pieceType, color);
+	public void setColorTree(int pieceType, Integer color) {
+		colorsTree.put(pieceType, color);
 	}
-
+	public void setColorTemp(int pieceType, Integer color) {
+		colorsTemp.put(pieceType, color);
+	}
+	
 	/**
 	 * Define an Image to be used for a given value in the grid.
 	 * 
@@ -120,15 +158,23 @@ public class Display {
 	/**
 	 * @return The color to be used for a given class of animal.
 	 */
-	private Integer getColor(Object pieceType) {
-		Integer col = colors.get(pieceType);
+	private Integer getColorTree(Object pieceType) {
+		Integer col = colorsTree.get(pieceType);
 		if (col == null) { // no color defined for this class
 			return UNKNOWN_COLOR;
 		} else {
 			return col;
 		}
 	}
-
+	private Integer getColorTemp(Object pieceType) {
+		Integer col = colorsTemp.get(pieceType);
+		if (col == null) { // no color defined for this class
+			return UNKNOWN_COLOR;
+		} else {
+			return col;
+		}
+	}
+	
 	private PImage getImage(Object pieceType) {
 		PImage img = images.get(pieceType);
 		return img;
@@ -158,11 +204,16 @@ public class Display {
 
 	public void setNumCols(int numCols) {
 		rows = numCols;
-		dx = w / rows;
+		dx = w / 2 / rows;
 	}
 
 	public void setNumRows(int numRows) {
 		cols = numRows;
 		dy = h / cols;
+	}
+
+	public void setup(int numRows, int numCols) {
+		setNumRows(numRows);
+		setNumCols(numCols);
 	}
 }
